@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { Button, Input } from './ui';
 
 export type ProfileUploadData = {
-  resume: FileList;
+  resume: FileList | null;
   linkedinUrl: string;
 };
 

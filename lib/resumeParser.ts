@@ -1,12 +1,10 @@
-import { readFile } from 'fs/promises';
-import pdf from 'pdf-parse';
 import { generateResponse } from './gemini';
 
-export async function parseResume(filePath: string): Promise<string> {
+export async function parseResume(file: File): Promise<string> {
   try {
-    const dataBuffer = await readFile(filePath);
-    const data = await pdf(dataBuffer);
-    
+    const arrayBuffer = await file.arrayBuffer();
+    const text = await extractTextFromPDF(arrayBuffer);
+
     const prompt = `
     Extract the following information from the given resume:
     - Name
@@ -17,7 +15,7 @@ export async function parseResume(filePath: string): Promise<string> {
     - Education
 
     Resume:
-    ${data.text}
+    ${text}
 
     Output the information in a JSON format.
     `;
@@ -28,4 +26,17 @@ export async function parseResume(filePath: string): Promise<string> {
     console.error('Error parsing resume:', error);
     throw error;
   }
+}
+
+async function extractTextFromPDF(arrayBuffer: ArrayBuffer): Promise<string> {
+  // We'll use a client-side PDF parsing library here
+  const pdfjsLib = await import('pdfjs-dist');
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let text = '';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map((item: any) => item.str).join(' ');
+  }
+  return text;
 }
