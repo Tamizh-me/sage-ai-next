@@ -17,7 +17,7 @@ export default function Home() {
   const [profileData, setProfileData] = useState<ProfileUploadData | null>(null);
 
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/auth/signin");
     }
