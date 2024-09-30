@@ -5,12 +5,27 @@ import { ProfileUpload, ProfileUploadData } from '../components/ProfileUpload';
 import { supabase } from '../lib/supabase';
 import { generateResponse } from '../lib/gemini';
 import { parseResume } from '../lib/resumeParser';
+import { useRouter } from "next/router";
+
+import { useEffect } from "react";
 
 export default function Home() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const router = useRouter();  
   const [step, setStep] = useState(1);
   const [userData, setUserData] = useState<BasicFormData | null>(null);
   const [profileData, setProfileData] = useState<ProfileUploadData | null>(null);
+
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/auth/signin");
+    }
+  }, [status, router]);
+
+  if (status === "loading") {
+    return <div>Loading...</div>;
+  }
 
   const handleBasicFormSubmit = async (data: BasicFormData) => {
     if (session?.user?.id) {
