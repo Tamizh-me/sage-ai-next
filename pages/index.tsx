@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import { generateResponse } from '../lib/gemini';
 import { parseResume } from '../lib/resumeParser';
 import { useRouter } from "next/router";
+import { signOut } from 'next-auth/react';
 
 import { useEffect } from "react";
 
@@ -103,6 +104,8 @@ export default function Home() {
 
   return (
     <div>
+      <h1>Welcome, {session.user.email}</h1>
+      <button onClick={() => signOut()}>Sign Out</button>
       {step === 1 && <BasicForm onSubmit={handleBasicFormSubmit} />}
       {step === 2 && <ProfileUpload onSubmit={handleProfileUpload} />}
       {step === 3 && (

@@ -14,35 +14,36 @@ export default NextAuth({
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
-        
+
         const { data, error } = await supabase.auth.signInWithPassword({
           email: credentials.email,
           password: credentials.password,
         });
 
         if (error) {
+          console.error("Supabase auth error:", error);
           return null;
         }
 
         return data.user;
       }
     }),
-  ],pages: {
+  ],
+  pages: {
     signIn: '/auth/signin',
   },
   callbacks: {
-    async session({ session, token }) {
-        if (token && session.user) {
-          session.user.id = token.id as string;
-        }
-        return session;
-      },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
       }
       return token;
     },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+      }
+      return session;
+    },
   },
-  
 });

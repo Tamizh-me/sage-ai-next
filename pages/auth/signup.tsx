@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/router';
-import Link from 'next/link';
+import { supabase } from '../../lib/supabase';
 
-export default function SignIn() {
+export default function SignUp() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -13,21 +12,27 @@ export default function SignIn() {
     e.preventDefault();
     setError('');
 
-    const result = await signIn('credentials', {
-      redirect: false,
-      email,
-      password,
-    });
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
 
-    if (result?.error) {
-      setError('Invalid email or password');
-    } else {
-      router.push('/');
+      if (error) {
+        setError(error.message);
+      } else if (data.user) {
+        // Redirect to sign-in page or home page
+        router.push('/auth/signin');
+      }
+    } catch (error) {
+      setError('An unexpected error occurred');
+      console.error('Sign-up error:', error);
     }
   };
 
   return (
-    <div><form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit}>
+      <h1>Sign Up</h1>
       {error && <p style={{ color: 'red' }}>{error}</p>}
       <input
         type="email"
@@ -43,10 +48,7 @@ export default function SignIn() {
         placeholder="Password"
         required
       />
-      <button type="submit">Sign In</button>
+      <button type="submit">Sign Up</button>
     </form>
-    <p>
-    Don't have an account? <Link href="/auth/signup">Sign up</Link>
-  </p></div>
   );
 }
