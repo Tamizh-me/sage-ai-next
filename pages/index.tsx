@@ -1,81 +1,112 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/router';
 import { BasicForm, BasicFormData } from '../components/BasicForm';
 import { ProfileUpload, ProfileUploadData } from '../components/ProfileUpload';
 import { supabase } from '../lib/supabase';
 import { generateResponse } from '../lib/gemini';
 import { parseResume } from '../lib/resumeParser';
-import { useRouter } from "next/router";
-import { signOut } from 'next-auth/react';
-
-import { useEffect } from "react";
+import { scrapeLinkedIn } from '../lib/linkedinScraper';
 
 export default function Home() {
   const { data: session, status } = useSession();
-  const router = useRouter();  
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [userData, setUserData] = useState<BasicFormData | null>(null);
   const [profileData, setProfileData] = useState<ProfileUploadData | null>(null);
+  const [aiInteractions, setAiInteractions] = useState<any[]>([]);
 
-
-  React.useEffect(() => {
+  useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/auth/signin");
+    } else if (status === "authenticated" && session?.user?.id) {
+      fetchUserProfile(session.user.id);
     }
-  }, [status, router]);
+  }, [status, router, session]);
 
-  if (status === "loading") {
-    return <div>Loading...</div>;
-  }
+  const fetchUserProfile = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching user profile:', error);
+    } else if (data) {
+      setUserData(data);
+      setProfileData({
+        resume: null,
+        linkedinUrl: data.linkedin_data?.url || ''
+      });
+      setAiInteractions(data.ai_interactions || []);
+      setStep(determineStep(data));
+    }
+  };
+
+  const determineStep = (data: any) => {
+    if (data.ai_interactions && data.ai_interactions.length > 0) return 4;
+    if (data.resume_data || data.linkedin_data) return 3;
+    if (data.name) return 2;
+    return 1;
+  };
 
   const handleBasicFormSubmit = async (data: BasicFormData) => {
     if (session?.user?.id) {
-      await supabase.from('users').upsert({ ...data, user_id: session.user.id });
-      setUserData(data);
-      setStep(2);
+      const { error } = await supabase
+        .from('user_profiles')
+        .upsert({ 
+          user_id: session.user.id,
+          ...data
+        });
+
+      if (error) {
+        console.error('Error saving basic form data:', error);
+      } else {
+        setUserData(data);
+        setStep(2);
+      }
     }
   };
 
   const handleProfileUpload = async (data: ProfileUploadData) => {
     if (session?.user?.id) {
+      let resumeData = null;
       if (data.resume && data.resume.length > 0) {
-        const file = data.resume[0];
-        const resumeText = await parseResume(file);
-        
-        // Store resume data in Supabase
-        await supabase.from('users').update({ 
-          resume_data: resumeText 
-        }).match({ user_id: session.user.id });
+        resumeData = await parseResume(data.resume[0]);
       }
 
+      let linkedinData = null;
       if (data.linkedinUrl) {
-        await supabase.from('users').update({ 
-          linkedin_url: data.linkedinUrl 
-        }).match({ user_id: session.user.id });
+        linkedinData = await scrapeLinkedIn(data.linkedinUrl);
       }
 
-      setProfileData(data);
-      setStep(3);
-      await handleAIInteraction(data);
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ 
+          resume_data: resumeData,
+          linkedin_data: linkedinData
+        })
+        .match({ user_id: session.user.id });
+
+      if (error) {
+        console.error('Error saving profile data:', error);
+      } else {
+        setProfileData(data);
+        setStep(3);
+        await handleAIInteraction(resumeData, linkedinData);
+      }
     }
   };
 
-  const handleAIInteraction = async (profileData: ProfileUploadData) => {
-    if (userData && profileData) {
-      let context = `User Data: ${JSON.stringify(userData)}\n`;
-      
-      if (profileData.resume && profileData.resume.length > 0) {
-        const file = profileData.resume[0];
-        const resumeText = await parseResume(file);
-        context += `Resume Data: ${resumeText}\n`;
-      }
-
-      if (profileData.linkedinUrl) {
-        context += `LinkedIn URL: ${profileData.linkedinUrl}\n`;
-      }
-
+  const handleAIInteraction = async (resumeData: any, linkedinData: any) => {
+    if (userData) {
       const prompt = `
-        Based on this user data: ${context}
+        Based on this user data:
+        Basic Info: ${JSON.stringify(userData)}
+        Resume: ${JSON.stringify(resumeData)}
+        LinkedIn: ${JSON.stringify(linkedinData)}
+        
         1. Create 5 key talking points from the summary.
         2. Start by asking a simple question about the user's background.
         3. If the current Q&A is relevant, ask the user to elaborate more on that topic.
@@ -86,17 +117,30 @@ export default function Home() {
 
       const response = await generateResponse(prompt);
 
-      // Store AI-generated profile in the database
-      await supabase.from('user_profiles').insert({
-        user_id: session?.user?.id,
-        ai_generated_profile: response,
-      });
+      const newInteraction = {
+        timestamp: new Date().toISOString(),
+        ai_response: response
+      };
 
-      // Update UI to show AI-generated profile and start conversation
-      setStep(4);
-      // You'll need to implement the UI for displaying the AI response and continuing the conversation
+      const updatedInteractions = [...aiInteractions, newInteraction];
+
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ ai_interactions: updatedInteractions })
+        .match({ user_id: session?.user?.id });
+
+      if (error) {
+        console.error('Error saving AI interaction:', error);
+      } else {
+        setAiInteractions(updatedInteractions);
+        setStep(4);
+      }
     }
   };
+
+  if (status === "loading") {
+    return <div>Loading...</div>;
+  }
 
   if (!session) {
     return <div>Please sign in to continue</div>;
@@ -104,20 +148,24 @@ export default function Home() {
 
   return (
     <div>
-      <h1>Welcome, {session.user.email}</h1>
-      <button onClick={() => signOut()}>Sign Out</button>
       {step === 1 && <BasicForm onSubmit={handleBasicFormSubmit} />}
       {step === 2 && <ProfileUpload onSubmit={handleProfileUpload} />}
       {step === 3 && (
         <div>
           <h2>AI Interaction</h2>
-          <button onClick={() => handleAIInteraction(profileData!)}>Start Conversation</button>
+          <button onClick={() => handleAIInteraction(userData?.resume_data, userData?.linkedin_data)}>Start Conversation</button>
         </div>
       )}
       {step === 4 && (
         <div>
           <h2>AI-Generated Profile</h2>
-          {/* Display AI-generated profile and implement conversation UI here */}
+          {aiInteractions.map((interaction, index) => (
+            <div key={index}>
+              <p>Timestamp: {interaction.timestamp}</p>
+              <p>AI Response: {interaction.ai_response}</p>
+            </div>
+          ))}
+          <button onClick={() => handleAIInteraction(userData?.resume_data, userData?.linkedin_data)}>Continue Conversation</button>
         </div>
       )}
     </div>
