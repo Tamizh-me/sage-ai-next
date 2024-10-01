@@ -4,15 +4,24 @@ import { useForm } from 'react-hook-form';
 import { Button, Input, Textarea } from './ui';
 
 export type BasicFormData = {
+   name: string;
+  email: string;
+  phone: string;
+  skills: string[]; // We'll split this into an array before submitting
+  work_experience: string; // We'll parse this as JSON before submitting
+  education_status: string;
+  resume_data?: any;
+  linkedin_data?: any;
+};
+export type ProcessedFormData = {
   name: string;
-  description: string;
-  isTechEnthusiast: boolean;
-  favoriteAnime: string;
-  goals: string;
-  freeTimeActivities: string;
-  educationStatus: 'inCollege' | 'completed';
-  resume_data?: any; // Add this line
-  linkedin_data?: any; // Add this line
+  email: string;
+  phone: string;
+  skills: string[];
+  work_experience: string;
+  education_status: string;
+  resume_data?: any;
+  linkedin_data?: any;
 };
 
 interface BasicFormProps {
@@ -23,16 +32,25 @@ interface BasicFormProps {
 export const BasicForm: React.FC<BasicFormProps> = ({ onSubmit }) => {
   const { register, handleSubmit } = useForm<BasicFormData>();
 
+
+  const handleFormSubmit = (data: BasicFormData) => {
+    // Process the data before submitting
+    const processedData = {
+      ...data,
+      //skills: data.skills.split(',').map(skill => skill.trim()),
+      work_experience: JSON.stringify({ description: data.work_experience }),
+      education_status: JSON.stringify({ status: data.education_status }),
+    };
+    onSubmit(processedData);
+  };
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <Input {...register('name')} placeholder="Name" />
-      <Textarea {...register('description')} placeholder="Describe yourself" />
-      <Input {...register('isTechEnthusiast')} type="checkbox" id="techEnthusiast" />
-      <label htmlFor="techEnthusiast">Are you a tech enthusiast?</label>
-      <Input {...register('favoriteAnime')} placeholder="Which anime/movie character you like" />
-      <Textarea {...register('goals')} placeholder="Any goals/vision you have" />
-      <Input {...register('freeTimeActivities')} placeholder="What would you like to do in free time" />
-      <select {...register('educationStatus')}>
+    <form onSubmit={handleSubmit(handleFormSubmit)}>
+      <Input {...register('name')} placeholder="Name" required />
+      <Input {...register('email')} placeholder="Email" type="email" required />
+      <Input {...register('phone')} placeholder="Phone" type="tel" />
+      <Textarea {...register('skills')} placeholder="Skills (comma-separated)" />
+      <Textarea {...register('work_experience')} placeholder="Work Experience" />
+      <select {...register('education_status')}>
         <option value="inCollege">In College</option>
         <option value="completed">Completed</option>
       </select>
