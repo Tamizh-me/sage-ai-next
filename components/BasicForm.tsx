@@ -11,10 +11,13 @@ export type BasicFormData = {
   goals: string;
   freeTimeActivities: string;
   educationStatus: 'inCollege' | 'completed';
+  resume_data?: any; // Add this line
+  linkedin_data?: any; // Add this line
 };
 
 interface BasicFormProps {
   onSubmit: (data: BasicFormData) => void;
+  
 }
 
 export const BasicForm: React.FC<BasicFormProps> = ({ onSubmit }) => {
