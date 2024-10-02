@@ -32,7 +32,7 @@ export default function Home() {
       .single();
 
     if (error) {
-      console.error('Error fetching user profile:', error);
+      console.error('Error fetching user ', error);
     } else if (data) {
       setUserData(data);
       setProfileData({
