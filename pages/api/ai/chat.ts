@@ -2,7 +2,6 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { generateResponse } from '../../../lib/gemini';
 import { parseResume } from '../../../lib/resumeParser';
 import { scrapeLinkedIn } from '../../../lib/linkedinScraper';
-import formidable from 'formidable';
 
 export const config = {
   api: {
