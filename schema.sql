@@ -28,5 +28,4 @@ BEFORE UPDATE ON user_profiles
 FOR EACH ROW
 EXECUTE FUNCTION update_modified_column();
 
--- Create an index on user_id for faster lookups
 CREATE INDEX idx_user_profiles_user_id ON user_profiles(user_id);
