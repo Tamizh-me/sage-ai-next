@@ -29,7 +29,6 @@ export async function parseResume(file: File): Promise<string> {
 }
 
 async function extractTextFromPDF(arrayBuffer: ArrayBuffer): Promise<string> {
-  // We'll use a client-side PDF parsing library here
   const pdfjsLib = await import('pdfjs-dist');
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   let text = '';
