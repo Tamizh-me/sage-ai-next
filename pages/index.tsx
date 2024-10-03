@@ -110,7 +110,6 @@ export default function Home() {
         1. Create 5 key talking points from the summary.
         2. Start by asking a simple question about the user's background.
         3. If the current Q&A is relevant, ask the user to elaborate more on that topic.
-        4. Ask exciting questions related to the user's answers.
         5. If projects are mentioned, ask about challenges faced and how they were overcome.
         6. End with questions on what's next for the user and their career aspirations.
       `;
