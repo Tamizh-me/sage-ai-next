@@ -19,7 +19,6 @@ export async function scrapeLinkedIn(profileUrl: string): Promise<any> {
     const response = await axios.request(options);
     const linkedinData = response.data;
 
-    // Use Gemini to summarize LinkedIn data
     const prompt = `
     Summarize the following LinkedIn profile data:
     ${JSON.stringify(linkedinData)}
