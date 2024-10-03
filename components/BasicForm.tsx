@@ -7,8 +7,8 @@ export type BasicFormData = {
    name: string;
   email: string;
   phone: string;
-  skills: string[]; // We'll split this into an array before submitting
-  work_experience: string; // We'll parse this as JSON before submitting
+  skills: string[]; 
+  work_experience: string;
   education_status: string;
   resume_data?: any;
   linkedin_data?: any;
@@ -34,10 +34,8 @@ export const BasicForm: React.FC<BasicFormProps> = ({ onSubmit }) => {
 
 
   const handleFormSubmit = (data: BasicFormData) => {
-    // Process the data before submitting
     const processedData = {
       ...data,
-      //skills: data.skills.split(',').map(skill => skill.trim()),
       work_experience: JSON.stringify({ description: data.work_experience }),
       education_status: JSON.stringify({ status: data.education_status }),
     };
