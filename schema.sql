@@ -14,18 +14,3 @@ CREATE TABLE user_profiles (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE OR REPLACE FUNCTION update_modified_column()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$
- LANGUAGE plpgsql;
-
-CREATE TRIGGER update_user_profiles_modtime
-BEFORE UPDATE ON user_profiles
-FOR EACH ROW
-EXECUTE FUNCTION update_modified_column();
-
-CREATE INDEX idx_user_profiles_user_id ON user_profiles(user_id);
