@@ -1,1 +1,1 @@
-project scr
+project s
